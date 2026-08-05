@@ -17,16 +17,20 @@
         <div class="brand-logo">SR</div>
         <h1 class="brand-name">SentinelRecon</h1>
       </div>
-      <h3 style="font-family: var(--font-display); font-size: 1.15rem; text-align: center; margin-bottom: 1.5rem; color: var(--text-secondary);">Unified Intelligence Access</h3>
       
+      <!-- Normal Login Form -->
       <form id="login-form">
+        <h3 style="font-family: var(--font-display); font-size: 1.15rem; text-align: center; margin-bottom: 1.5rem; color: var(--text-secondary);">Unified Intelligence Access</h3>
         <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" id="username" class="form-control" placeholder="e.g. admin" required>
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" class="form-control" placeholder="e.g. user@sentinel.com" required>
         </div>
         <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div style="text-align: right; margin-bottom: 1rem;">
+          <a href="#" id="forgot-password-link" style="color: var(--accent-cyan); font-size: 0.75rem; text-decoration: none;">Forgot Password?</a>
         </div>
         <div id="login-error-msg" style="color: var(--accent-coral); font-size: 0.825rem; margin-bottom: 1rem; text-align: center; display: none;">
           Invalid credentials. Please try again.
@@ -35,8 +39,29 @@
           <i class="fa-solid fa-lock-open"></i> Authenticate
         </button>
       </form>
+
+      <!-- Forgot Password Form (Hidden initially) -->
+      <form id="forgot-form" style="display: none;">
+        <h3 style="font-family: var(--font-display); font-size: 1.15rem; text-align: center; margin-bottom: 1.5rem; color: var(--text-secondary);">Reset Account Credentials</h3>
+        <div class="form-group">
+          <label for="forgot-email">Account Email</label>
+          <input type="email" id="forgot-email" class="form-control" placeholder="e.g. user@sentinel.com" required>
+        </div>
+        <div class="form-group">
+          <label for="forgot-new-password">New Password</label>
+          <input type="password" id="forgot-new-password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div id="forgot-message" style="font-size: 0.8rem; margin-bottom: 1rem; text-align: center; display: none;"></div>
+        <button type="submit" class="btn" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+          <i class="fa-solid fa-key"></i> Update Credentials
+        </button>
+        <div style="text-align: center; margin-top: 1.5rem;">
+          <a href="#" id="back-to-login-link" style="color: var(--text-secondary); font-size: 0.75rem; text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Back to Login</a>
+        </div>
+      </form>
+
       <div style="margin-top: 1.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
-        Demo Access: user/userpass (User) or admin/adminpass (Admin)
+        Demo: user@sentinel.com/userpass or admin@sentinel.com/adminpass
       </div>
     </div>
   </div>
@@ -64,9 +89,13 @@
         <i class="fa-solid fa-shield-halved"></i>
         <span>Defense Sandbox</span>
       </li>
-      <li class="nav-item" data-tab="knowledge-base">
+      <li class="nav-item" data-tab="knowledge-base" id="nav-knowledge-base">
         <i class="fa-solid fa-graduation-cap"></i>
         <span>Training & Quiz</span>
+      </li>
+      <li class="nav-item" data-tab="my-profile" id="nav-my-profile">
+        <i class="fa-solid fa-user-gear"></i>
+        <span>My Profile</span>
       </li>
       <!-- Admin Tab (Hidden by default) -->
       <li class="nav-item" data-tab="admin-console" id="nav-admin-console" style="display: none; border-color: rgba(255, 183, 3, 0.2);">
@@ -465,12 +494,116 @@
           </div>
 
           <div class="card">
-            <div class="card-title">
-              <i class="fa-solid fa-circle-question" style="color: var(--accent-purple);"></i>
-              Knowledge Assessment Quiz
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <span><i class="fa-solid fa-circle-question" style="color: var(--accent-purple);"></i> Knowledge Assessment Quiz</span>
+              <div id="quiz-week-tabs" style="display: flex; gap: 0.25rem;">
+                <button class="quiz-week-btn active" data-week="1">W1</button>
+                <button class="quiz-week-btn" data-week="2">W2</button>
+                <button class="quiz-week-btn" data-week="3">W3</button>
+                <button class="quiz-week-btn" data-week="4">W4</button>
+              </div>
             </div>
-            <div id="quiz-container">
+            
+            <div id="quiz-header-status" style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 4px; font-size: 0.8rem; border: 1px dashed var(--border-color); display: flex; justify-content: space-between;">
+              <span style="color: var(--text-secondary);">Focus: <strong id="quiz-week-topic" style="color: var(--accent-cyan);">Passive Recon</strong></span>
+              <span id="quiz-week-score" style="color: var(--accent-amber); font-weight: bold;">Not Started</span>
+            </div>
+
+            <div id="quiz-container" style="max-height: 480px; overflow-y: auto; padding-right: 0.5rem;">
               <!-- Quiz rendered dynamically via JS -->
+            </div>
+
+            <div style="margin-top: 1rem; text-align: right;">
+              <button class="btn" id="submit-quiz-btn" style="width: 100%; justify-content: center; display: none;">Submit Week Answers</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= MY PROFILE TAB ================= -->
+      <section id="my-profile" class="tab-panel">
+        <div class="grid-2">
+          <div class="card" style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 2rem;">
+            <div class="profile-avatar" id="profile-initials">SR</div>
+            <h3 id="profile-email-display" style="font-family: var(--font-display); font-size: 1.25rem; margin-top: 1rem; color: var(--text-primary);">user@sentinel.com</h3>
+            <div id="profile-role-display" style="font-size: 0.75rem; background: rgba(0, 245, 212, 0.1); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); padding: 0.2rem 0.75rem; border-radius: 4px; margin-top: 0.5rem;">STANDARD USER</div>
+            
+            <div style="width: 100%; text-align: left; margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+              <h4 style="font-family: var(--font-display); font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent-cyan);">Account Details</h4>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: var(--text-secondary);">
+                <div style="display: flex; justify-content: space-between;">
+                  <span>System Authority:</span>
+                  <span style="font-family: var(--font-mono); color: var(--text-primary);">Level 1 (Auditor)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Database Status:</span>
+                  <span style="color: var(--accent-emerald);">Synchronized</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>Session Type:</span>
+                  <span style="color: var(--text-primary);">Secure (SSL/TLS Mocked)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-trophy" style="color: var(--accent-amber);"></i>
+              Cybersecurity Training Milestones
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">
+              Track your performance checkups across the 4 structured training weeks. Achieve 70% or higher to qualify for standard certifications.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <!-- Week 1 -->
+              <div class="profile-milestone-row">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div class="milestone-badge" id="badge-w1">W1</div>
+                  <div>
+                    <h4 style="font-size: 0.9rem; font-weight: 600;">Week 1: Passive Recon & OSINT</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">20 Questions (Basic)</span>
+                  </div>
+                </div>
+                <div id="score-w1" style="font-weight: bold; color: var(--text-muted); font-size: 0.95rem;">Locked</div>
+              </div>
+
+              <!-- Week 2 -->
+              <div class="profile-milestone-row">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div class="milestone-badge" id="badge-w2">W2</div>
+                  <div>
+                    <h4 style="font-size: 0.9rem; font-weight: 600;">Week 2: Port Scan Mechanics</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">20 Questions (Intermediate-Basic)</span>
+                  </div>
+                </div>
+                <div id="score-w2" style="font-weight: bold; color: var(--text-muted); font-size: 0.95rem;">Locked</div>
+              </div>
+
+              <!-- Week 3 -->
+              <div class="profile-milestone-row">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div class="milestone-badge" id="badge-w3">W3</div>
+                  <div>
+                    <h4 style="font-size: 0.9rem; font-weight: 600;">Week 3: TCP Flag Manipulation</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">20 Questions (Intermediate-Advanced)</span>
+                  </div>
+                </div>
+                <div id="score-w3" style="font-weight: bold; color: var(--text-muted); font-size: 0.95rem;">Locked</div>
+              </div>
+
+              <!-- Week 4 -->
+              <div class="profile-milestone-row">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div class="milestone-badge" id="badge-w4">W4</div>
+                  <div>
+                    <h4 style="font-size: 0.9rem; font-weight: 600;">Week 4: Defenses & Hardening</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">20 Questions (Advanced)</span>
+                  </div>
+                </div>
+                <div id="score-w4" style="font-weight: bold; color: var(--text-muted); font-size: 0.95rem;">Locked</div>
+              </div>
             </div>
           </div>
         </div>
@@ -478,6 +611,37 @@
 
       <!-- ================= ADMIN AUDIT CONSOLE TAB ================= -->
       <section id="admin-console" class="tab-panel">
+        <div class="grid-3" style="margin-bottom: 2rem;">
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-users" style="color: var(--accent-amber);"></i>
+              Total Database Users
+            </div>
+            <div id="admin-total-users" style="font-size: 2.25rem; font-weight: 700; color: var(--accent-amber); font-family: var(--font-display);">2</div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Registered account profiles in SQLite</p>
+          </div>
+          <div class="card" style="grid-column: span 2;">
+            <div class="card-title">
+              <i class="fa-solid fa-folder-tree" style="color: var(--accent-cyan);"></i>
+              Database User Directory
+            </div>
+            <div style="overflow-y: auto; max-height: 120px;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8rem;" id="admin-user-table">
+                <thead>
+                  <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-primary);">
+                    <th style="padding: 0.25rem 0.5rem;">ID</th>
+                    <th style="padding: 0.25rem 0.5rem;">Email Address</th>
+                    <th style="padding: 0.25rem 0.5rem;">Security Role</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-user-rows" style="color: var(--text-secondary);">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div class="card" style="margin-bottom: 2rem;">
           <div class="card-title">
             <i class="fa-solid fa-user-shield" style="color: var(--accent-amber);"></i>

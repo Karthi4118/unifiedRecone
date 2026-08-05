@@ -42,7 +42,7 @@ def main():
         "POST /api/login (Standard User)",
         "/api/login",
         method="POST",
-        data={"username": "user", "password": "userpass"}
+        data={"email": "user@sentinel.com", "password": "userpass"}
     )
     assert user_login["success"] is True, "Failed login success check"
     assert user_login["role"] == "user", "Mismatched role in user auth response"
@@ -52,7 +52,7 @@ def main():
         "POST /api/login (Admin User)",
         "/api/login",
         method="POST",
-        data={"username": "admin", "password": "adminpass"}
+        data={"email": "admin@sentinel.com", "password": "adminpass"}
     )
     assert admin_login["success"] is True, "Failed login success check"
     assert admin_login["role"] == "admin", "Mismatched role in admin auth response"
@@ -62,27 +62,66 @@ def main():
         "POST /api/login (Bad credentials -> 401)",
         "/api/login",
         method="POST",
-        data={"username": "admin", "password": "badpassword"},
+        data={"email": "admin@sentinel.com", "password": "badpassword"},
         expected_status=401
     )
     assert bad_login["success"] is False, "Bad login should return success: False"
 
-    # 4. Test GET /api/slides
+    # 4. Test POST /api/forgot-password - Update User Password
+    run_test(
+        "POST /api/forgot-password (Successful Update)",
+        "/api/forgot-password",
+        method="POST",
+        data={"email": "user@sentinel.com", "password": "newuserpass"}
+    )
+
+    # 5. Test login with newly updated password
+    new_login = run_test(
+        "POST /api/login (With newly updated password)",
+        "/api/login",
+        method="POST",
+        data={"email": "user@sentinel.com", "password": "newuserpass"}
+    )
+    assert new_login["success"] is True, "Should successfully authenticate with updated password"
+
+    # Reset password back to original for subsequent tests
+    run_test(
+        "POST /api/forgot-password (Restore original password)",
+        "/api/forgot-password",
+        method="POST",
+        data={"email": "user@sentinel.com", "password": "userpass"}
+    )
+
+    # 6. Test GET /api/slides
     slides = run_test("GET /api/slides", "/api/slides")
     assert len(slides) > 0, "No slides returned"
 
-    # 5. Test GET /api/history - Unauthorized (403 for non-admin)
+    # 7. Test GET /api/history - Unauthorized (403 for non-admin)
     run_test(
         "GET /api/history (Unauthorized Role -> 403)",
         "/api/history?role=user",
         expected_status=403
     )
 
-    # 6. Test GET /api/history - Authorized (200 for admin)
+    # 8. Test GET /api/history - Authorized (200 for admin)
     run_test(
         "GET /api/history (Authorized Admin -> 200)",
         "/api/history?role=admin"
     )
+
+    # 9. Test GET /api/admin/users - Unauthorized (403 for non-admin)
+    run_test(
+        "GET /api/admin/users (Unauthorized user directory query -> 403)",
+        "/api/admin/users?role=user",
+        expected_status=403
+    )
+
+    # 10. Test GET /api/admin/users - Authorized (200 for admin)
+    users_data = run_test(
+        "GET /api/admin/users (Authorized Admin query -> 200)",
+        "/api/admin/users?role=admin"
+    )
+    assert users_data["total"] >= 2, "Should return at least 2 default registered users"
 
     print("==================================================")
     print(" \033[92mALL TESTS COMPLETED SUCCESSFULLY (STATE MATCHED)\033[0m ")

@@ -1,4 +1,4 @@
-/* app.js - Refactored Hybrid Client Controller with User & Admin Authentication */
+/* app.js - Refactored Client Controller with Email Auth, Recovery Resets, Profiles, and Week-Wise Quizzes */
 
 document.addEventListener('DOMContentLoaded', () => {
   // ================= LIVE DEBUGGER INTERCEPTOR =================
@@ -58,7 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     role: null,
     activeTab: 'dashboard',
     alertsDetected: 0,
-    quizScore: 0,
+    quizScore: 0, // Cumulative average score
+    quizWeekScores: {
+      1: null,
+      2: null,
+      3: null,
+      4: null
+    },
+    currentQuizWeek: 1,
     defenses: {
       ids: true,
       firewall: true,
@@ -79,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
       slides: [],
       questions: [],
       currentSlide: 0,
-      answersSubmitted: {}
+      answersSubmitted: {} // Maps questionId to selected option index
     }
   };
 
@@ -130,52 +137,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   ];
 
-  const FALLBACK_QUESTIONS = [
-    {
-      id: 1,
-      question: "Which type of reconnaissance does NOT involve direct interaction with the target systems?",
-      options: [
-        "Active Reconnaissance",
-        "Passive Reconnaissance",
-        "Exploitation",
-        "Port Scanning"
-      ],
-      correct: 1
-    },
-    {
-      id: 2,
-      question: "What is the final packet sent by a scanner to complete a full TCP Connect Scan handshake?",
-      options: [
-        "SYN",
-        "SYN-ACK",
-        "RST",
-        "ACK"
-      ],
-      correct: 3
-    },
-    {
-      id: 3,
-      question: "How does a target operating system typically respond to a UDP scan on a CLOSED port?",
-      options: [
-        "SYN-ACK",
-        "ICMP Port Unreachable",
-        "No response",
-        "TCP Reset (RST)"
-      ],
-      correct: 1
-    },
-    {
-      id: 4,
-      question: "Which defensive mechanism is specifically designed to act as a decoy and capture intelligence?",
-      options: [
-        "Honeypot",
-        "Firewall ruleset",
-        "Rate limiter",
-        "DNSSEC validation"
-      ],
-      correct: 0
+  // Offline mock questions (20 unique questions per week, matching server database seed)
+  const FALLBACK_QUESTIONS = [];
+  const TOPICS_BY_WEEK = {
+    1: "Passive Recon & OSINT",
+    2: "Port Scan Mechanics",
+    3: "TCP Flag Manipulation",
+    4: "Defenses & Hardening"
+  };
+
+  // Generate fallback mock quiz bank structured by week
+  for (let w = 1; w <= 4; w++) {
+    for (let q = 1; q <= 20; q++) {
+      const globalId = (w - 1) * 20 + q;
+      FALLBACK_QUESTIONS.push({
+        id: globalId,
+        week: w,
+        question: `[Week ${w} - Question ${q}] This is a fallback query regarding ${TOPICS_BY_WEEK[w]}?`,
+        options: ["Option A (Incorrect)", "Option B (Correct Answer)", "Option C (Incorrect)", "Option D (Incorrect)"],
+        correct: 1,
+        explanation: `Under ${TOPICS_BY_WEEK[w]} guidelines, Option B is correct because it maps directly to standard cybersecurity methodologies.`
+      });
     }
-  ];
+  }
 
   const FALLBACK_METHODOLOGIES = {
     syn: {
@@ -207,18 +191,90 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // ================= AUTHENTICATION PORTAL =================
+  // ================= DOM ELEMENT SELECTIONS =================
   const loginOverlay = document.getElementById('login-overlay');
   const loginForm = document.getElementById('login-form');
+  const loginEmail = document.getElementById('login-email');
+  const loginPassword = document.getElementById('login-password');
   const loginErrorMsg = document.getElementById('login-error-msg');
+  
+  const forgotForm = document.getElementById('forgot-form');
+  const forgotEmail = document.getElementById('forgot-email');
+  const forgotNewPassword = document.getElementById('forgot-new-password');
+  const forgotMessage = document.getElementById('forgot-message');
+  
+  const forgotPasswordLink = document.getElementById('forgot-password-link');
+  const backToLoginLink = document.getElementById('back-to-login-link');
+  
   const logoutBtn = document.getElementById('logout-btn');
   const userBadge = document.getElementById('user-role-badge');
   const navAdminConsole = document.getElementById('nav-admin-console');
+  const navKnowledgeBase = document.getElementById('nav-knowledge-base');
+  const navMyProfile = document.getElementById('nav-my-profile');
 
+  // ================= AUTHENTICATION & RECOVERY HANDLERS =================
+  
+  // Toggle forgot password cards
+  forgotPasswordLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.style.display = 'none';
+    forgotForm.style.display = 'block';
+    forgotMessage.style.display = 'none';
+  });
+
+  backToLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    forgotForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    loginErrorMsg.style.display = 'none';
+  });
+
+  // Handle forgot password submission
+  forgotForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    forgotMessage.style.display = 'none';
+    
+    const email = forgotEmail.value.trim();
+    const password = forgotNewPassword.value.trim();
+
+    try {
+      if (window.location.protocol === 'file:') {
+        // Offline Mock Password update
+        if (email === 'user@sentinel.com' || email === 'admin@sentinel.com') {
+          forgotMessage.textContent = "Offline Reset Success! Use your new password to log in.";
+          forgotMessage.style.color = "var(--accent-emerald)";
+          forgotMessage.style.display = "block";
+        } else {
+          throw new Error("User email not found in local offline storage.");
+        }
+        return;
+      }
+
+      const forgotResp = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const resData = await forgotResp.json();
+      if (forgotResp.ok && resData.success) {
+        forgotMessage.textContent = "Credentials reset successfully! Return to Login.";
+        forgotMessage.style.color = "var(--accent-emerald)";
+      } else {
+        throw new Error(resData.error || "Reset failed.");
+      }
+    } catch (err) {
+      forgotMessage.textContent = err.message;
+      forgotMessage.style.color = "var(--accent-coral)";
+    }
+    forgotMessage.style.display = 'block';
+  });
+
+  // Handle standard Login submission
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value.trim();
     loginErrorMsg.style.display = 'none';
 
     try {
@@ -231,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const loginResp = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ email, password })
           });
 
           if (loginResp.ok) {
@@ -246,16 +302,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // If backend was unreachable or static server returned 404, check locally
+      // Offline credentials validation fallback
       if (!loggedIn) {
-        if ((username === 'admin' && password === 'adminpass') || (username === 'user' && password === 'userpass')) {
+        if ((email === 'admin@sentinel.com' && password === 'adminpass') || 
+            (email === 'user@sentinel.com' && password === 'userpass')) {
           loggedIn = true;
-          role = (username === 'admin') ? 'admin' : 'user';
+          role = (email === 'admin@sentinel.com') ? 'admin' : 'user';
         }
       }
 
       if (loggedIn) {
-        handleSuccessfulLogin(username, role);
+        handleSuccessfulLogin(email, role);
       } else {
         throw new Error("Invalid credentials");
       }
@@ -268,31 +325,44 @@ document.addEventListener('DOMContentLoaded', () => {
   logoutBtn.addEventListener('click', () => {
     state.user = null;
     state.role = null;
+    state.quizWeekScores = { 1: null, 2: null, 3: null, 4: null };
+    state.quizScore = 0;
     
     // Clear inputs and reset UI
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
+    loginEmail.value = '';
+    loginPassword.value = '';
+    forgotEmail.value = '';
+    forgotNewPassword.value = '';
+    
     loginOverlay.style.display = 'flex';
+    loginForm.style.display = 'block';
+    forgotForm.style.display = 'none';
     navAdminConsole.style.display = 'none';
+    navKnowledgeBase.style.display = 'flex';
     
     switchTab('dashboard');
   });
 
-  function handleSuccessfulLogin(username, role) {
-    state.user = username;
+  function handleSuccessfulLogin(email, role) {
+    state.user = email;
     state.role = role;
 
     loginOverlay.style.display = 'none';
-    userBadge.textContent = `${username.toUpperCase()} (${role.toUpperCase()})`;
+    userBadge.textContent = `${email.toUpperCase()} (${role.toUpperCase()})`;
     userBadge.style.color = role === 'admin' ? 'var(--accent-amber)' : 'var(--accent-cyan)';
     userBadge.style.borderColor = role === 'admin' ? 'var(--accent-amber)' : 'var(--accent-cyan)';
 
+    // Dynamic Navigation Visibility depending on credentials role
     if (role === 'admin') {
       navAdminConsole.style.display = 'flex';
+      navKnowledgeBase.style.display = 'none'; // Hide quiz section from Admin
     } else {
       navAdminConsole.style.display = 'none';
+      navKnowledgeBase.style.display = 'flex'; // Show quiz section to Users
     }
 
+    // Refresh profile card and active stats
+    updateProfileUI();
     fetchTrainingData();
     switchTab('dashboard');
   }
@@ -333,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tab === 'osint-analyzer') titleText = 'OSINT Footprint Analyzer';
     if (tab === 'defense-sandbox') titleText = 'Security Defense Sandbox';
     if (tab === 'knowledge-base') titleText = 'Cybersecurity Training & Quiz';
+    if (tab === 'my-profile') titleText = 'User Profile Console';
     if (tab === 'admin-console') titleText = 'Admin Audit Console';
     pageTitle.textContent = titleText;
 
@@ -340,6 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
       updateDashboardData();
     } else if (tab === 'admin-console') {
       fetchAdminLogs();
+      fetchAdminUserStats();
+    } else if (tab === 'my-profile') {
+      updateProfileUI();
     }
   }
 
@@ -361,6 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ================= ADMIN AUDIT TELEMETRY LOGS =================
   const dbHistoryRows = document.getElementById('db-history-rows');
+  const adminTotalUsersEl = document.getElementById('admin-total-users');
+  const adminUserRowsEl = document.getElementById('admin-user-rows');
 
   async function fetchAdminLogs() {
     dbHistoryRows.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Querying SQLite tables...</td></tr>';
@@ -407,7 +483,87 @@ document.addEventListener('DOMContentLoaded', () => {
     dbHistoryRows.innerHTML = rowsHTML;
   }
 
-  // ================= DATA FETCHING (BACKEND INTEGRATION) =================
+  // Fetch registered user list directory for admin dashboard
+  async function fetchAdminUserStats() {
+    if (!adminUserRowsEl) return;
+    adminUserRowsEl.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 1rem; color: var(--text-muted);">Loading user metrics...</td></tr>';
+    
+    try {
+      if (window.location.protocol === 'file:') throw new Error("Offline mode");
+
+      const statsResp = await fetch(`/api/admin/users?role=${state.role}`);
+      if (!statsResp.ok) throw new Error("Unauthorized data call");
+
+      const data = await statsResp.json();
+      adminTotalUsersEl.textContent = data.total;
+      
+      let rows = '';
+      data.users.forEach(u => {
+        rows += `
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+            <td style="padding: 0.35rem 0.5rem; font-family: var(--font-mono);">${u.id}</td>
+            <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">${u.email}</td>
+            <td style="padding: 0.35rem 0.5rem;">${u.role.toUpperCase()}</td>
+          </tr>
+        `;
+      });
+      adminUserRowsEl.innerHTML = rows;
+
+    } catch (err) {
+      console.log("Loading offline fallback stats directory.");
+      adminTotalUsersEl.textContent = "2";
+      adminUserRowsEl.innerHTML = `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+          <td style="padding: 0.35rem 0.5rem; font-family: var(--font-mono);">1</td>
+          <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">admin@sentinel.com</td>
+          <td style="padding: 0.35rem 0.5rem;">ADMIN</td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+          <td style="padding: 0.35rem 0.5rem; font-family: var(--font-mono);">2</td>
+          <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">user@sentinel.com</td>
+          <td style="padding: 0.35rem 0.5rem;">USER</td>
+        </tr>
+      `;
+    }
+  }
+
+  // ================= USER PROFILE MANAGEMENT =================
+  function updateProfileUI() {
+    const initialsEl = document.getElementById('profile-initials');
+    const emailDisplayEl = document.getElementById('profile-email-display');
+    const roleDisplayEl = document.getElementById('profile-role-display');
+
+    if (!emailDisplayEl) return;
+
+    const emailStr = state.user || 'user@sentinel.com';
+    emailDisplayEl.textContent = emailStr;
+    roleDisplayEl.textContent = (state.role || 'USER').toUpperCase();
+    
+    // Initials parsing
+    const initials = emailStr.split('@')[0].substring(0, 2).toUpperCase();
+    initialsEl.textContent = initials;
+
+    // Refresh week scores indicators on the profile panel
+    for (let w = 1; w <= 4; w++) {
+      const scoreVal = state.quizWeekScores[w];
+      const scoreLabelEl = document.getElementById(`score-w1` ? `score-w${w}` : null);
+      const badgeEl = document.getElementById(`badge-w1` ? `badge-w${w}` : null);
+
+      if (scoreLabelEl && badgeEl) {
+        if (scoreVal !== null) {
+          scoreLabelEl.textContent = `${scoreVal}%`;
+          scoreLabelEl.style.color = scoreVal >= 70 ? 'var(--accent-emerald)' : 'var(--accent-coral)';
+          badgeEl.classList.add('completed');
+        } else {
+          scoreLabelEl.textContent = "Locked";
+          scoreLabelEl.style.color = 'var(--text-muted)';
+          badgeEl.classList.remove('completed');
+        }
+      }
+    }
+  }
+
+  // ================= DATA FETCHING (QUIZ WEEKS MIGRATION) =================
   async function fetchTrainingData() {
     try {
       if (window.location.protocol === 'file:') {
@@ -420,21 +576,70 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         throw new Error();
       }
+    } catch (err) {
+      console.log("Loading offline fallback slides.");
+      state.training.slides = FALLBACK_SLIDES;
+    }
+    renderSlide();
+    loadWeekQuiz(state.currentQuizWeek);
+  }
 
-      const quizResp = await fetch('/api/quiz');
+  // Renders 20 questions for the selected week
+  async function loadWeekQuiz(weekNum) {
+    state.currentQuizWeek = weekNum;
+    state.training.questions = [];
+    state.training.answersSubmitted = {};
+    
+    // Clear and hide submit buttons
+    const submitBtn = document.getElementById('submit-quiz-btn');
+    if (submitBtn) submitBtn.style.display = 'none';
+
+    // Update Topic label
+    const topicEl = document.getElementById('quiz-week-topic');
+    if (topicEl) topicEl.textContent = TOPICS_BY_WEEK[weekNum];
+
+    // Refresh score display
+    const wScore = state.quizWeekScores[weekNum];
+    const scoreValEl = document.getElementById('quiz-week-score');
+    if (scoreValEl) {
+      scoreValEl.textContent = wScore !== null ? `Graded: ${wScore}%` : "Not Started";
+      scoreValEl.style.color = wScore !== null ? 'var(--accent-cyan)' : 'var(--accent-amber)';
+    }
+
+    // Update active week selector tab button styles
+    document.querySelectorAll('#quiz-week-tabs button').forEach(btn => {
+      const btnWeek = parseInt(btn.getAttribute('data-week'));
+      if (btnWeek === weekNum) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    try {
+      if (window.location.protocol === 'file:') throw new Error("Offline fetch");
+      
+      const quizResp = await fetch(`/api/quiz?week=${weekNum}`);
       if (quizResp.ok) {
         state.training.questions = await quizResp.json();
       } else {
         throw new Error();
       }
     } catch (err) {
-      console.log("Loading offline fallback training content.");
-      state.training.slides = FALLBACK_SLIDES;
-      state.training.questions = FALLBACK_QUESTIONS;
+      console.log("Loading offline fallback quiz questions for week:", weekNum);
+      state.training.questions = FALLBACK_QUESTIONS.filter(q => q.week === weekNum);
     }
-    renderSlide();
+
     renderQuiz();
   }
+
+  // Bind week button triggers
+  document.querySelectorAll('#quiz-week-tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const week = parseInt(btn.getAttribute('data-week'));
+      loadWeekQuiz(week);
+    });
+  });
 
   // ================= PORT SCAN SIMULATOR =================
   const startScanBtn = document.getElementById('start-scan-btn');
@@ -565,50 +770,55 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function visualizePacket(packet) {
-    const canvas = document.getElementById('network-canvas');
-    const fromEl = document.getElementById(`node-${packet.from}`);
-    const toEl = document.getElementById(`node-${packet.to}`);
+    try {
+      const canvas = document.getElementById('network-canvas');
+      if (!canvas) return;
+      const fromEl = document.getElementById(`node-${packet.from}`);
+      const toEl = document.getElementById(`node-${packet.to}`);
 
-    if (!fromEl || !toEl) return;
+      if (!fromEl || !toEl) return;
 
-    const fromRect = fromEl.getBoundingClientRect();
-    const toRect = toEl.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
+      const fromRect = fromEl.getBoundingClientRect();
+      const toRect = toEl.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
 
-    const startX = fromRect.left - canvasRect.left + 24;
-    const startY = fromRect.top - canvasRect.top + 24;
-    const endX = toRect.left - canvasRect.left + 24;
-    const endY = toRect.top - canvasRect.top + 24;
+      const startX = fromRect.left - canvasRect.left + 24;
+      const startY = fromRect.top - canvasRect.top + 24;
+      const endX = toRect.left - canvasRect.left + 24;
+      const endY = toRect.top - canvasRect.top + 24;
 
-    const pkt = document.createElement('div');
-    pkt.className = 'packet';
-    
-    if (packet.type === 'resp-open') pkt.style.backgroundColor = 'var(--accent-emerald)';
-    if (packet.type === 'error' || packet.type === 'reset') pkt.style.backgroundColor = 'var(--accent-coral)';
-    
-    pkt.style.left = `${startX}px`;
-    pkt.style.top = `${startY}px`;
-    canvas.appendChild(pkt);
+      const pkt = document.createElement('div');
+      pkt.className = 'packet';
+      
+      if (packet.type === 'resp-open') pkt.style.backgroundColor = 'var(--accent-emerald)';
+      if (packet.type === 'error' || packet.type === 'reset') pkt.style.backgroundColor = 'var(--accent-coral)';
+      
+      pkt.style.left = `${startX}px`;
+      pkt.style.top = `${startY}px`;
+      canvas.appendChild(pkt);
 
-    let progress = 0;
-    const duration = state.scanner.speed === 'fast' ? 200 : state.scanner.speed === 'slow' ? 1000 : 500;
-    const steps = 20;
-    const stepTime = duration / steps;
-    
-    const animInterval = setInterval(() => {
-      progress += 1 / steps;
-      if (progress >= 1) {
-        clearInterval(animInterval);
-        pkt.remove();
-        toEl.classList.add('active');
-        setTimeout(() => toEl.classList.remove('active'), 250);
-      } else {
-        const currentX = startX + (endX - startX) * progress;
-        const currentY = startY + (endY - startY) * progress;
-        pkt.style.left = `${currentX}px`;
-        pkt.style.top = `${currentY}px`;
-      }
-    }, stepTime);
+      let progress = 0;
+      const duration = state.scanner.speed === 'fast' ? 200 : state.scanner.speed === 'slow' ? 1000 : 500;
+      const steps = 20;
+      const stepTime = duration / steps;
+      
+      const animInterval = setInterval(() => {
+        progress += 1 / steps;
+        if (progress >= 1) {
+          clearInterval(animInterval);
+          pkt.remove();
+          toEl.classList.add('active');
+          setTimeout(() => toEl.classList.remove('active'), 250);
+        } else {
+          const currentX = startX + (endX - startX) * progress;
+          const currentY = startY + (endY - startY) * progress;
+          pkt.style.left = `${currentX}px`;
+          pkt.style.top = `${currentY}px`;
+        }
+      }, stepTime);
+    } catch (err) {
+      console.warn("Packet visualization animation skipped:", err.message);
+    }
   }
 
   function stopPortScan(abortReason = '') {
@@ -616,7 +826,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.scanner.intervalId) {
       clearInterval(state.scanner.intervalId);
     }
-    document.getElementById('node-attacker').classList.remove('active');
+    const attackerNode = document.getElementById('node-attacker');
+    if (attackerNode) attackerNode.classList.remove('active');
     if (abortReason) {
       addTerminalLine(scanConsole, abortReason, 'line-error');
     }
@@ -813,12 +1024,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('summary-ratelimit').style.color = state.defenses.ratelimit ? 'var(--accent-emerald)' : 'var(--accent-coral)';
   }
 
-  // ================= TRAINING & QUIZ =================
+  // ================= TRAINING & QUIZ (WEEK-WISE SUPPORT) =================
   const slideContainer = document.getElementById('training-slides');
   const prevSlideBtn = document.getElementById('prev-slide-btn');
   const nextSlideBtn = document.getElementById('next-slide-btn');
   const slideTracker = document.getElementById('slide-tracker');
   const quizContainer = document.getElementById('quiz-container');
+  const submitQuizBtn = document.getElementById('submit-quiz-btn');
 
   prevSlideBtn.addEventListener('click', () => {
     if (state.training.currentSlide > 0) {
@@ -849,12 +1061,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderQuiz() {
     quizContainer.innerHTML = '';
+    
+    const activeWeek = state.currentQuizWeek;
+    const isGraded = state.quizWeekScores[activeWeek] !== null;
+
+    if (state.training.questions.length === 0) {
+      quizContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 1rem;">No questions seeded for this week.</div>';
+      submitQuizBtn.style.display = 'none';
+      return;
+    }
+
     state.training.questions.forEach((q, idx) => {
       const qDiv = document.createElement('div');
-      qDiv.style.marginBottom = '1.5rem';
+      qDiv.style.marginBottom = '2rem';
+      qDiv.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
+      qDiv.style.paddingBottom = '1rem';
+      qDiv.className = 'quiz-question-block';
+      qDiv.setAttribute('data-qid', q.id);
       
       const qTitle = document.createElement('h4');
-      qTitle.style.fontSize = '0.95rem';
+      qTitle.style.fontSize = '0.9rem';
       qTitle.style.marginBottom = '0.75rem';
       qTitle.textContent = `${idx + 1}. ${q.question}`;
       qDiv.appendChild(qTitle);
@@ -862,95 +1088,156 @@ document.addEventListener('DOMContentLoaded', () => {
       q.options.forEach((opt, optIdx) => {
         const optDiv = document.createElement('div');
         optDiv.className = 'quiz-option';
+        
+        // Restore submitted state visual styling if graded
+        const answersSubmitted = state.training.answersSubmitted[q.id];
+        if (isGraded) {
+          const isSelected = answersSubmitted === optIdx;
+          const isCorrectAnswer = optIdx === q.correct;
+          if (isCorrectAnswer) {
+            optDiv.classList.add('correct');
+          } else if (isSelected) {
+            optDiv.classList.add('incorrect');
+          }
+        } else {
+          // If not graded, bind click listener
+          optDiv.addEventListener('click', () => selectOption(q.id, optIdx, qDiv));
+          
+          if (answersSubmitted === optIdx) {
+            optDiv.style.borderColor = 'var(--accent-cyan)';
+            optDiv.style.background = 'rgba(0, 242, 254, 0.05)';
+          }
+        }
+
         optDiv.innerHTML = `
           <span>${opt}</span>
-          <i class="fa-solid fa-circle" style="font-size: 0.65rem; color: rgba(255,255,255,0.1);"></i>
+          <i class="fa-solid ${isGraded && optIdx === q.correct ? 'fa-circle-check' : 'fa-circle'}" style="font-size: 0.65rem; color: ${isGraded && optIdx === q.correct ? 'var(--accent-emerald)' : 'rgba(255,255,255,0.1)'}"></i>
         `;
         
-        optDiv.addEventListener('click', () => submitQuizAnswer(q.id, optIdx, optDiv, qDiv));
         qDiv.appendChild(optDiv);
       });
 
+      // Display explanation text if graded
+      if (isGraded) {
+        const expDiv = document.createElement('div');
+        expDiv.className = 'line-explanation';
+        expDiv.innerHTML = `<strong>Explanation:</strong> ${q.explanation}`;
+        qDiv.appendChild(expDiv);
+      }
+
       quizContainer.appendChild(qDiv);
     });
+
+    // Control visibility of submit button
+    if (isGraded) {
+      submitQuizBtn.style.display = 'none';
+    } else {
+      submitQuizBtn.style.display = 'block';
+    }
   }
 
-  async function submitQuizAnswer(questionId, selectedIdx, optDiv, qDiv) {
-    if (state.training.answersSubmitted[questionId] !== undefined) return;
-    
+  function selectOption(questionId, selectedIdx, qDiv) {
     state.training.answersSubmitted[questionId] = selectedIdx;
     
-    try {
-      if (window.location.protocol === 'file:') {
-        throw new Error();
-      }
-
-      const checkResp = await fetch('/api/quiz/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: Number(questionId), selected: selectedIdx })
-      });
-
-      if (!checkResp.ok) throw new Error();
-
-      const validation = await checkResp.json();
-      applyQuizSelectionUI(validation.correct, validation.correctIndex, optDiv, qDiv);
-
-    } catch (err) {
-      console.log("Using offline quiz check fallback.");
-      const question = FALLBACK_QUESTIONS.find(q => q.id == questionId);
-      if (question) {
-        const isCorrect = (selectedIdx === question.correct);
-        applyQuizSelectionUI(isCorrect, question.correct, optDiv, qDiv);
+    // Reset border borders for all child options
+    qDiv.querySelectorAll('.quiz-option').forEach((opt, idx) => {
+      if (idx === selectedIdx) {
+        opt.style.borderColor = 'var(--accent-cyan)';
+        opt.style.background = 'rgba(0, 242, 254, 0.05)';
       } else {
-        console.error("Could not find matching fallback question ID:", questionId);
+        opt.style.borderColor = 'var(--border-color)';
+        opt.style.background = 'rgba(13, 20, 38, 0.6)';
       }
-    }
+    });
   }
 
-  function applyQuizSelectionUI(isCorrect, correctIndex, optDiv, qDiv) {
-    if (isCorrect) {
-      optDiv.classList.add('correct');
-      optDiv.querySelector('i').className = 'fa-solid fa-circle-check';
-      optDiv.querySelector('i').style.color = 'var(--accent-emerald)';
-    } else {
-      optDiv.classList.add('incorrect');
-      optDiv.querySelector('i').className = 'fa-solid fa-circle-xmark';
-      optDiv.querySelector('i').style.color = 'var(--accent-coral)';
-
-      const correctOpt = qDiv.querySelectorAll('.quiz-option')[correctIndex];
-      if (correctOpt) {
-        correctOpt.classList.add('correct');
-        correctOpt.querySelector('i').className = 'fa-solid fa-circle-check';
-        correctOpt.querySelector('i').style.color = 'var(--accent-emerald)';
-      }
-    }
-
-    calculateQuizScore();
-  }
-
-  function calculateQuizScore() {
-    let totalQuestions = state.training.questions.length;
-    if (totalQuestions === 0) return;
-    
-    let uniqueCorrects = 0;
+  // Handle entire Week Quiz grading submission
+  submitQuizBtn.addEventListener('click', async () => {
+    const activeWeek = state.currentQuizWeek;
+    let unansweredCount = 0;
     
     state.training.questions.forEach(q => {
-      const submitted = state.training.answersSubmitted[q.id];
-      if (submitted !== undefined) {
-        const questionData = FALLBACK_QUESTIONS.find(fq => fq.id == q.id);
-        if (questionData && submitted === questionData.correct) {
-          uniqueCorrects++;
-        }
+      if (state.training.answersSubmitted[q.id] === undefined) {
+        unansweredCount++;
       }
     });
 
-    let score = Math.round((uniqueCorrects / totalQuestions) * 100);
-    state.quizScore = Math.min(100, score);
-    updateDashboardData();
-  }
+    if (unansweredCount > 0) {
+      alert(`Please answer all 20 questions before submitting. (${unansweredCount} remaining)`);
+      return;
+    }
 
-  // Initial runs (Pre-auth placeholders)
+    // Submit and check answers
+    let correctCount = 0;
+    
+    for (let i = 0; i < state.training.questions.length; i++) {
+      const q = state.training.questions[i];
+      const selected = state.training.answersSubmitted[q.id];
+      
+      try {
+        if (window.location.protocol === 'file:') throw new Error();
+        
+        const checkResp = await fetch('/api/quiz/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: q.id, selected })
+        });
+        
+        const validation = await checkResp.json();
+        q.correct = validation.correctIndex;
+        q.explanation = validation.explanation;
+        if (validation.correct) correctCount++;
+        
+      } catch (err) {
+        // Fallback validation checks local array
+        const localQ = FALLBACK_QUESTIONS.find(fq => fq.id == q.id);
+        q.correct = localQ.correct;
+        q.explanation = localQ.explanation;
+        if (selected === localQ.correct) correctCount++;
+      }
+    }
+
+    // Record week score
+    const weekScore = Math.round((correctCount / state.training.questions.length) * 100);
+    state.quizWeekScores[activeWeek] = weekScore;
+
+    // Calculate overall average score
+    let totalScoreSum = 0;
+    let gradedWeeksCount = 0;
+    for (let w = 1; w <= 4; w++) {
+      if (state.quizWeekScores[w] !== null) {
+        totalScoreSum += state.quizWeekScores[w];
+        gradedWeeksCount++;
+      }
+    }
+    state.quizScore = gradedWeeksCount > 0 ? Math.round(totalScoreSum / gradedWeeksCount) : 0;
+
+    // Refresh views
+    updateProfileUI();
+    updateDashboardData();
+    renderQuiz();
+    
+    // Set score header
+    const scoreValEl = document.getElementById('quiz-week-score');
+    if (scoreValEl) {
+      scoreValEl.textContent = `Graded: ${weekScore}%`;
+      scoreValEl.style.color = 'var(--accent-emerald)';
+    }
+
+    // Dynamic progression unlock indicator
+    if (activeWeek < 4) {
+      setTimeout(() => {
+        const nextWeek = activeWeek + 1;
+        if (confirm(`Week ${activeWeek} Quiz Submitted Successfully!\nScore achieved: ${weekScore}%\nWould you like to unlock and load the next Week ${nextWeek} test?`)) {
+          loadWeekQuiz(nextWeek);
+        }
+      }, 500);
+    } else {
+      alert(`Final Week 4 quiz completed! Your cumulative training score is ${state.quizScore}%. Check your profile tab for milestones.`);
+    }
+  });
+
+  // Initial runs
   updateDefenseIndicators();
   updateDashboardSettings();
   updateDashboardData();
