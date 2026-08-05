@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime
 
 PORT = 8000
-DB_FILE = "sentinel_recon_v2.db"
+DB_FILE = "sentinel_recon_v3.db"
 
 # Seed Data Configurations
 SEED_SLIDES = [
@@ -159,8 +159,8 @@ SEED_QUESTIONS = [
 ]
 
 SEED_USERS = [
-    ("admin@sentinel.com", "adminpass", "admin"),
-    ("user@sentinel.com", "userpass", "user")
+    ("admin@gmail.com", "adminpass", "admin"),
+    ("user@gmail.com", "userpass", "user")
 ]
 
 SCAN_METHODOLOGIES = {

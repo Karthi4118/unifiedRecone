@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (window.location.protocol === 'file:') {
         // Offline Mock Password update
-        if (email === 'user@sentinel.com' || email === 'admin@sentinel.com') {
+        if (email === 'user@gmail.com' || email === 'admin@gmail.com') {
           forgotMessage.textContent = "Offline Reset Success! Use your new password to log in.";
           forgotMessage.style.color = "var(--accent-emerald)";
           forgotMessage.style.display = "block";
@@ -304,10 +304,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Offline credentials validation fallback
       if (!loggedIn) {
-        if ((email === 'admin@sentinel.com' && password === 'adminpass') || 
-            (email === 'user@sentinel.com' && password === 'userpass')) {
+        if ((email === 'admin@gmail.com' && password === 'adminpass') || 
+            (email === 'user@gmail.com' && password === 'userpass')) {
           loggedIn = true;
-          role = (email === 'admin@sentinel.com') ? 'admin' : 'user';
+          role = (email === 'admin@gmail.com') ? 'admin' : 'user';
         }
       }
 
@@ -511,16 +511,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } catch (err) {
       console.log("Loading offline fallback stats directory.");
-      adminTotalUsersEl.textContent = "2";
       adminUserRowsEl.innerHTML = `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
           <td style="padding: 0.35rem 0.5rem; font-family: var(--font-mono);">1</td>
-          <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">admin@sentinel.com</td>
+          <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">admin@gmail.com</td>
           <td style="padding: 0.35rem 0.5rem;">ADMIN</td>
         </tr>
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
           <td style="padding: 0.35rem 0.5rem; font-family: var(--font-mono);">2</td>
-          <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">user@sentinel.com</td>
+          <td style="padding: 0.35rem 0.5rem; color: var(--accent-cyan);">user@gmail.com</td>
           <td style="padding: 0.35rem 0.5rem;">USER</td>
         </tr>
       `;
@@ -535,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!emailDisplayEl) return;
 
-    const emailStr = state.user || 'user@sentinel.com';
+    const emailStr = state.user || 'user@gmail.com';
     emailDisplayEl.textContent = emailStr;
     roleDisplayEl.textContent = (state.role || 'USER').toUpperCase();
     

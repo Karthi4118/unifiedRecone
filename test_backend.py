@@ -42,7 +42,7 @@ def main():
         "POST /api/login (Standard User)",
         "/api/login",
         method="POST",
-        data={"email": "user@sentinel.com", "password": "userpass"}
+        data={"email": "user@gmail.com", "password": "userpass"}
     )
     assert user_login["success"] is True, "Failed login success check"
     assert user_login["role"] == "user", "Mismatched role in user auth response"
@@ -52,7 +52,7 @@ def main():
         "POST /api/login (Admin User)",
         "/api/login",
         method="POST",
-        data={"email": "admin@sentinel.com", "password": "adminpass"}
+        data={"email": "admin@gmail.com", "password": "adminpass"}
     )
     assert admin_login["success"] is True, "Failed login success check"
     assert admin_login["role"] == "admin", "Mismatched role in admin auth response"
@@ -62,7 +62,7 @@ def main():
         "POST /api/login (Bad credentials -> 401)",
         "/api/login",
         method="POST",
-        data={"email": "admin@sentinel.com", "password": "badpassword"},
+        data={"email": "admin@gmail.com", "password": "badpassword"},
         expected_status=401
     )
     assert bad_login["success"] is False, "Bad login should return success: False"
@@ -72,7 +72,7 @@ def main():
         "POST /api/forgot-password (Successful Update)",
         "/api/forgot-password",
         method="POST",
-        data={"email": "user@sentinel.com", "password": "newuserpass"}
+        data={"email": "user@gmail.com", "password": "newuserpass"}
     )
 
     # 5. Test login with newly updated password
@@ -80,7 +80,7 @@ def main():
         "POST /api/login (With newly updated password)",
         "/api/login",
         method="POST",
-        data={"email": "user@sentinel.com", "password": "newuserpass"}
+        data={"email": "user@gmail.com", "password": "newuserpass"}
     )
     assert new_login["success"] is True, "Should successfully authenticate with updated password"
 
@@ -89,7 +89,7 @@ def main():
         "POST /api/forgot-password (Restore original password)",
         "/api/forgot-password",
         method="POST",
-        data={"email": "user@sentinel.com", "password": "userpass"}
+        data={"email": "user@gmail.com", "password": "userpass"}
     )
 
     # 6. Test GET /api/slides
