@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SentinelRecon - Automated Test Suite</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Additional custom styling for test runner */
+    .test-runner-container {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      height: calc(100vh - 80px);
+      overflow: hidden;
+    }
+    .test-sidebar {
+      background: rgba(8, 12, 26, 0.9);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+    .test-preview {
+      background: #020408;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .test-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: var(--bg-main);
+    }
+    .test-item {
+      background: rgba(13, 20, 38, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+    }
+    .test-item.passed {
+      border-color: var(--accent-emerald);
+      background: rgba(0, 245, 212, 0.05);
+    }
+    .test-item.failed {
+      border-color: var(--accent-coral);
+      background: rgba(255, 42, 95, 0.05);
+    }
+    .test-item.running {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.05);
+      animation: pulse-border 1.5s infinite;
+    }
+    .test-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .test-status-icon {
+      font-size: 1rem;
+    }
+    .test-status-icon.passed { color: var(--accent-emerald); }
+    .test-status-icon.failed { color: var(--accent-coral); }
+    .test-status-icon.running { color: var(--accent-cyan); animation: spin 1s linear infinite; }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar Navigation (Matching design system) -->
+  <aside class="sidebar" style="width: 260px;">
+    <div class="brand">
+      <div class="brand-logo">SR</div>
+      <h1 class="brand-name">SentinelRecon</h1>
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item active">
+        <i class="fa-solid fa-flask"></i>
+        <span>Test Runner</span>
+      </li>
+      <li class="nav-item" onclick="window.location.href='index.html'">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Back to App</span>
+      </li>
+    </ul>
+  </aside>
+
+  <div class="app-container">
+    <header class="topbar">
+      <h2 class="page-title">Integration Test Suite</h2>
+      <div class="system-status" style="color: var(--accent-cyan); border-color: rgba(0, 242, 254, 0.2); background: rgba(0, 242, 254, 0.05);">
+        <span class="status-dot" style="background-color: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan-glow);"></span>
+        <span id="overall-status">TEST ENGINE READY</span>
+      </div>
+    </header>
+
+    <div class="test-runner-container">
+      <!-- Test Cases List -->
+      <div class="test-sidebar">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3 style="font-family: var(--font-display); font-size: 1.1rem;">Test Cases</h3>
+          <button class="btn" id="run-tests-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Run Suite</button>
+        </div>
+
+        <div id="tests-list">
+          <div class="test-item" id="test-tab-switching">
+            <span class="test-name">1. Tab Switching Navigation</span>
+            <i class="fa-solid fa-circle-question test-status-icon" style="color: var(--text-muted);"></i>
+          </div>
+          <div class="test-item" id="test-port-scanner">
+            <span class="test-name">2. Port Scan Simulation & Terminal Logs</span>
+            <i class="fa-solid fa-circle-question test-status-icon" style="color: var(--text-muted);"></i>
+          </div>
+          <div class="test-item" id="test-osint-analyzer">
+            <span class="test-name">3. OSINT Query & Mitigation Advice</span>
+            <i class="fa-solid fa-circle-question test-status-icon" style="color: var(--text-muted);"></i>
+          </div>
+          <div class="test-item" id="test-defense-sandbox">
+            <span class="test-name">4. Security Toggles & Control Math</span>
+            <i class="fa-solid fa-circle-question test-status-icon" style="color: var(--text-muted);"></i>
+          </div>
+          <div class="test-item" id="test-knowledge-quiz">
+            <span class="test-name">5. Training Slide & Score Trackers</span>
+            <i class="fa-solid fa-circle-question test-status-icon" style="color: var(--text-muted);"></i>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: auto; padding: 1rem;">
+          <div class="card-title" style="font-size: 0.9rem; margin-bottom: 0.5rem;">Test Summary</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);">
+            Passed: <span id="passed-count" style="color: var(--accent-emerald); font-weight: bold;">0</span> / 5<br>
+            Failed: <span id="failed-count" style="color: var(--accent-coral); font-weight: bold;">0</span><br>
+            Duration: <span id="test-duration">0ms</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live App Preview Container -->
+      <div class="test-preview">
+        <div style="padding: 0.75rem 1.5rem; background: rgba(8, 12, 26, 0.95); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 0.85rem; font-family: var(--font-display); color: var(--text-secondary);">Simulated Sandbox Environment (IFrame)</span>
+          <i class="fa-solid fa-rotate-right" style="cursor: pointer; color: var(--text-secondary);" id="reload-iframe-btn" title="Reload Shell"></i>
+        </div>
+        <iframe src="index.html" class="test-iframe" id="app-iframe"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="tests.js"></script>
+</body>
+</html>

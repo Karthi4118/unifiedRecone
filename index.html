@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SentinelRecon - Cybersecurity Reconnaissance & Defense Hub</title>
+  <meta name="description" content="An interactive educational simulation platform for understanding cybersecurity reconnaissance and defensive tactics.">
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Fullscreen Login Portal Overlay -->
+  <div id="login-overlay">
+    <div class="login-card">
+      <div class="brand" style="margin-bottom: 2rem; justify-content: center;">
+        <div class="brand-logo">SR</div>
+        <h1 class="brand-name">SentinelRecon</h1>
+      </div>
+      <h3 style="font-family: var(--font-display); font-size: 1.15rem; text-align: center; margin-bottom: 1.5rem; color: var(--text-secondary);">Unified Intelligence Access</h3>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" class="form-control" placeholder="e.g. admin" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <div id="login-error-msg" style="color: var(--accent-coral); font-size: 0.825rem; margin-bottom: 1rem; text-align: center; display: none;">
+          Invalid credentials. Please try again.
+        </div>
+        <button type="submit" class="btn" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+          <i class="fa-solid fa-lock-open"></i> Authenticate
+        </button>
+      </form>
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+        Demo Access: user/userpass (User) or admin/adminpass (Admin)
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">SR</div>
+      <h1 class="brand-name">SentinelRecon</h1>
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item active" data-tab="dashboard">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Dashboard</span>
+      </li>
+      <li class="nav-item" data-tab="scan-simulator">
+        <i class="fa-solid fa-network-wired"></i>
+        <span>Scan Simulator</span>
+      </li>
+      <li class="nav-item" data-tab="osint-analyzer">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <span>OSINT Analyzer</span>
+      </li>
+      <li class="nav-item" data-tab="defense-sandbox">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Defense Sandbox</span>
+      </li>
+      <li class="nav-item" data-tab="knowledge-base">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>Training & Quiz</span>
+      </li>
+      <!-- Admin Tab (Hidden by default) -->
+      <li class="nav-item" data-tab="admin-console" id="nav-admin-console" style="display: none; border-color: rgba(255, 183, 3, 0.2);">
+        <i class="fa-solid fa-user-shield" style="color: var(--accent-amber);"></i>
+        <span style="color: var(--accent-amber);">Admin Console</span>
+      </li>
+    </ul>
+
+    <!-- Logout Utility -->
+    <div style="margin-top: auto; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+      <button class="btn btn-secondary" id="logout-btn" style="width: 100%; justify-content: center;">
+        <i class="fa-solid fa-right-from-bracket"></i> Log Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- App Main Area -->
+  <div class="app-container">
+    <header class="topbar">
+      <h2 class="page-title" id="current-page-title">Operational Dashboard</h2>
+      <div style="display: flex; align-items: center; gap: 1.5rem;">
+        <div id="user-role-badge" style="font-size: 0.75rem; font-family: var(--font-display); background: rgba(255,255,255,0.05); padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
+          ROLE: USER
+        </div>
+        <div class="system-status">
+          <span class="status-dot"></span>
+          <span>DEFENSIVE SYSTEM: ACTIVE</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+
+      <!-- ================= DASHBOARD TAB ================= -->
+      <section id="dashboard" class="tab-panel active">
+        <div class="grid-3" style="margin-bottom: 2rem;">
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-shield-halved" style="color: var(--accent-cyan);"></i>
+              System Health
+            </div>
+            <div style="font-size: 2.25rem; font-weight: 700; color: var(--accent-emerald); font-family: var(--font-display);">98.4%</div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Defensive controls running optimally</p>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-bell" style="color: var(--accent-coral);"></i>
+              Simulated Attacks Detected
+            </div>
+            <div id="dashboard-alerts" style="font-size: 2.25rem; font-weight: 700; color: var(--accent-coral); font-family: var(--font-display);">0</div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Blocked recon scans in the simulator</p>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-graduation-cap" style="color: var(--accent-amber);"></i>
+              Training Score
+            </div>
+            <div id="dashboard-score" style="font-size: 2.25rem; font-weight: 700; color: var(--accent-amber); font-family: var(--font-display);">0%</div>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Recon security certification progress</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-info-circle" style="color: var(--accent-cyan);"></i>
+              SentinelRecon Overview
+            </div>
+            <div style="color: var(--text-secondary); font-size: 0.95rem;">
+              <p style="margin-bottom: 1rem;">Welcome to the Unified Cyber Reconnaissance and Defense Suite. This console lets you explore how attackers trace paths into corporate networks and how security engineers prevent detection.</p>
+              <p style="margin-bottom: 1rem;">Use the tabs on the left to navigate between modules:</p>
+              <ul style="padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <li><strong>Scan Simulator</strong>: Analyze SYN, Connect, and UDP scanning protocols in real-time.</li>
+                <li><strong>OSINT Analyzer</strong>: Discover how public exposure leaks sensitive corporate footprints.</li>
+                <li><strong>Defense Sandbox</strong>: Toggle network shields, honeypots, and rate limits to block incoming reconnaissance.</li>
+                <li><strong>Training & Quiz</strong>: Certify your expertise with cybersecurity knowledge modules.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-shield-halved" style="color: var(--accent-purple);"></i>
+              Active Security Settings
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;" id="active-settings-summary">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">IDS Sensitivity</span>
+                <span id="summary-ids" style="color: var(--accent-cyan);">Normal</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Firewall Filtering Rules</span>
+                <span id="summary-firewall" style="color: var(--accent-emerald);">Standard</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Simulated Honeypots</span>
+                <span id="summary-honeypot" style="color: var(--accent-coral);">Disabled</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Recon Rate Limiting</span>
+                <span id="summary-ratelimit" style="color: var(--accent-emerald);">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SCAN SIMULATOR TAB ================= -->
+      <section id="scan-simulator" class="tab-panel">
+        <div class="grid-2">
+          <div>
+            <div class="card" style="margin-bottom: 2rem;">
+              <div class="card-title">
+                <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
+                Scan Engine Controls
+              </div>
+              <div class="form-group">
+                <label for="scan-type">Scan Methodology</label>
+                <select id="scan-type" class="form-control">
+                  <option value="syn">TCP SYN Stealth Scan (Half-Open)</option>
+                  <option value="connect">TCP Connect Full Handshake Scan</option>
+                  <option value="udp">UDP Port Scan</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="scan-speed">Scan Interval Speed</label>
+                <select id="scan-speed" class="form-control">
+                  <option value="slow">Polite / Stealth (Slow)</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="fast">Aggressive (Fast)</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn" id="start-scan-btn"><i class="fa-solid fa-play"></i> Initiate Scan</button>
+                <button class="btn btn-secondary" id="stop-scan-btn"><i class="fa-solid fa-stop"></i> Abort</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <i class="fa-solid fa-terminal" style="color: var(--accent-emerald);"></i>
+                Scanner Output Console
+              </div>
+              <div class="terminal-window" id="scan-terminal">
+                <div class="terminal-header">
+                  <span class="terminal-dot red"></span>
+                  <span class="terminal-dot yellow"></span>
+                  <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-output" id="scan-console-output">
+                  <div class="terminal-line line-info">Reconnaissance scan engine idle. Choose parameters above and click Initiate Scan.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="height: 100%; display: flex; flex-direction: column;">
+              <div class="card-title">
+                <i class="fa-solid fa-diagram-project" style="color: var(--accent-purple);"></i>
+                Network Target Map
+              </div>
+              <div class="network-canvas" id="network-canvas">
+                <div class="network-grid"></div>
+                
+                <!-- Attacker Node -->
+                <div class="node" id="node-attacker" style="top: 130px; left: 30px;">
+                  <div class="node-icon"><i class="fa-solid fa-laptop-code"></i></div>
+                  <div class="node-label">Attacker (Recon Src)</div>
+                </div>
+
+                <!-- Firewall Node -->
+                <div class="node" id="node-firewall" style="top: 130px; left: 200px;">
+                  <div class="node-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                  <div class="node-label">Firewall/IDS</div>
+                </div>
+
+                <!-- Target Nodes -->
+                <div class="node" id="node-web" style="top: 40px; right: 50px;">
+                  <div class="node-icon"><i class="fa-solid fa-globe"></i></div>
+                  <div class="node-label">Web Server (Port 80)</div>
+                </div>
+                <div class="node" id="node-db" style="top: 130px; right: 50px;">
+                  <div class="node-icon"><i class="fa-solid fa-database"></i></div>
+                  <div class="node-label">Database Server (Port 3306)</div>
+                </div>
+                <div class="node" id="node-mail" style="top: 220px; right: 50px;">
+                  <div class="node-icon"><i class="fa-solid fa-envelope"></i></div>
+                  <div class="node-label">Mail Gateway (Port 25)</div>
+                </div>
+              </div>
+
+              <div class="card" style="flex-grow: 1; background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.03);">
+                <div class="card-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+                  <i class="fa-solid fa-circle-info" style="color: var(--accent-cyan);"></i>
+                  Methodology Guide
+                </div>
+                <p id="scan-description-text" style="color: var(--text-secondary); font-size: 0.85rem;">
+                  Select a scan methodology to analyze its characteristics, packet flags, and detection footprints here.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= OSINT ANALYZER TAB ================= -->
+      <section id="osint-analyzer" class="tab-panel">
+        <div class="grid-2">
+          <div class="card" style="height: fit-content;">
+            <div class="card-title">
+              <i class="fa-solid fa-search" style="color: var(--accent-cyan);"></i>
+              OSINT Exposure Analyzer
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+              Enter a mock domain below to simulate passive reconnaissance discovery. This tool scans mock metadata leakages, WHOIS databases, and DNS configurations.
+            </p>
+            <div class="form-group">
+              <label for="osint-domain">Target Domain Name</label>
+              <div style="display: flex; gap: 0.75rem;">
+                <input type="text" id="osint-domain" class="form-control" placeholder="e.g. examplecorp.com" value="securecorp.io">
+                <button class="btn" id="start-osint-btn">Analyze</button>
+              </div>
+            </div>
+
+            <div style="margin-top: 2rem;">
+              <h3 style="font-family: var(--font-display); font-size: 1rem; margin-bottom: 1rem;">Simulation Logs</h3>
+              <div class="terminal-window" id="osint-terminal" style="height: 180px;">
+                <div class="terminal-output" id="osint-console-output">
+                  <div class="terminal-line line-info">OSINT Analyzer is idle. Input domain above to gather intelligence.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom: 2rem;">
+              <div class="card-title">
+                <i class="fa-solid fa-clipboard-list" style="color: var(--accent-amber);"></i>
+                Gathered Exposure Footprint
+              </div>
+              <div id="osint-results-panel" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="text-align: center; padding: 2rem 0; color: var(--text-muted);">
+                  <i class="fa-solid fa-magnifying-glass" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                  <p>Execute scan to display intelligence data.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" id="hardening-card" style="display: none;">
+              <div class="card-title">
+                <i class="fa-solid fa-shield" style="color: var(--accent-emerald);"></i>
+                Defense Mitigation Steps
+              </div>
+              <div id="hardening-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= DEFENSE SANDBOX TAB ================= -->
+      <section id="defense-sandbox" class="tab-panel">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-sliders" style="color: var(--accent-cyan);"></i>
+              Defensive Control Panel
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem;">
+              Toggle defense shields to simulate how firewalls, honeypots, and Intrusion Detection Systems (IDS) counter network scanners and slow down adversary mapping.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+              <!-- IDS Control -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
+                <div>
+                  <h4 style="font-family: var(--font-display); font-size: 1rem; margin-bottom: 0.25rem;">Intrusion Detection System (IDS)</h4>
+                  <p style="color: var(--text-secondary); font-size: 0.825rem;">Detect scan signatures and packet flags</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="defense-ids-toggle" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <!-- Firewall Rules -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
+                <div>
+                  <h4 style="font-family: var(--font-display); font-size: 1rem; margin-bottom: 0.25rem;">Strict Firewall Rulesets</h4>
+                  <p style="color: var(--text-secondary); font-size: 0.825rem;">Drop packets targeted at filtered database/internal ports</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="defense-firewall-toggle" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <!-- Honeypots -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
+                <div>
+                  <h4 style="font-family: var(--font-display); font-size: 1rem; margin-bottom: 0.25rem;">Mock Decoy Honeypots</h4>
+                  <p style="color: var(--text-secondary); font-size: 0.825rem;">Deploy high-interaction decoy nodes to capture scanner telemetry</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="defense-honeypot-toggle">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <!-- Rate Limiting -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem;">
+                <div>
+                  <h4 style="font-family: var(--font-display); font-size: 1rem; margin-bottom: 0.25rem;">Anti-Scanning Rate Limiting</h4>
+                  <p style="color: var(--text-secondary); font-size: 0.825rem;">Drop connections exceeding 5 packets/sec from single IPs</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="defense-ratelimit-toggle" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom: 2rem;">
+              <div class="card-title">
+                <i class="fa-solid fa-gauge-high" style="color: var(--accent-purple);"></i>
+                Simulated Defense Indicators
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                    <span>Attacker Recon Efficiency</span>
+                    <span id="sandbox-recon-efficiency" style="color: var(--accent-coral);">25%</span>
+                  </div>
+                  <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div id="bar-recon-efficiency" style="width: 25%; height: 100%; background: linear-gradient(90deg, var(--accent-emerald), var(--accent-coral)); transition: width 0.5s ease;"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                    <span>Defensive Detection Capability</span>
+                    <span id="sandbox-detection-cap" style="color: var(--accent-emerald);">90%</span>
+                  </div>
+                  <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div id="bar-detection-cap" style="width: 90%; height: 100%; background: var(--accent-emerald); transition: width 0.5s ease;"></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.875rem; margin-bottom: 0.5rem;">
+                    <span>Decoy Attraction Score</span>
+                    <span id="sandbox-decoy-attraction" style="color: var(--accent-amber);">0%</span>
+                  </div>
+                  <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div id="bar-decoy-attraction" style="width: 0%; height: 100%; background: var(--accent-amber); transition: width 0.5s ease;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                <i class="fa-solid fa-bug" style="color: var(--accent-coral);"></i>
+                Live Security Intrusion Logs
+              </div>
+              <div class="terminal-window" id="sandbox-terminal" style="height: 180px;">
+                <div class="terminal-output" id="sandbox-console-output">
+                  <div class="terminal-line line-success">Defenses loaded. Standing by for mock traffic logs.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= KNOWLEDGE BASE TAB ================= -->
+      <section id="knowledge-base" class="tab-panel">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-book" style="color: var(--accent-cyan);"></i>
+              Cyber Reconnaissance Training
+            </div>
+            
+            <div id="training-slides">
+              <!-- Slides rendered dynamically via JS -->
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+              <button class="btn btn-secondary" id="prev-slide-btn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+              <span id="slide-tracker" style="align-self: center; font-size: 0.875rem; color: var(--text-secondary);">Slide 1 of 4</span>
+              <button class="btn" id="next-slide-btn">Next <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <i class="fa-solid fa-circle-question" style="color: var(--accent-purple);"></i>
+              Knowledge Assessment Quiz
+            </div>
+            <div id="quiz-container">
+              <!-- Quiz rendered dynamically via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ADMIN AUDIT CONSOLE TAB ================= -->
+      <section id="admin-console" class="tab-panel">
+        <div class="card" style="margin-bottom: 2rem;">
+          <div class="card-title">
+            <i class="fa-solid fa-user-shield" style="color: var(--accent-amber);"></i>
+            Security Database Logs Audit
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            You are authorized under the **Admin Role** database access credentials. The table below represents persistent database transactions committed to the SQLite <code>scan_history</code> logging tables.
+          </p>
+
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;" id="db-history-table">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-primary); font-family: var(--font-display);">
+                  <th style="padding: 0.75rem 1rem;">Timestamp</th>
+                  <th style="padding: 0.75rem 1rem;">Scan Type</th>
+                  <th style="padding: 0.75rem 1rem;">Packets Exchanged</th>
+                  <th style="padding: 0.75rem 1rem;">Defensive Alerts Logs</th>
+                </tr>
+              </thead>
+              <tbody id="db-history-rows" style="color: var(--text-secondary);">
+                <!-- DB Rows inserted dynamically -->
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Querying SQLite tables...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Debug Console Panel (Togglable) -->
+  <div id="debug-console" style="position: fixed; bottom: 0; right: 0; width: 400px; height: 200px; background: rgba(2, 4, 8, 0.95); border-left: 1px solid var(--border-color); border-top: 1px solid var(--border-color); z-index: 10000; font-family: var(--font-mono); font-size: 0.75rem; display: flex; flex-direction: column; box-shadow: 0 -5px 15px rgba(0,0,0,0.5);">
+    <div style="padding: 0.5rem; background: rgba(8, 12, 26, 0.95); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+      <span style="color: var(--accent-amber); font-weight: bold;"><i class="fa-solid fa-bug"></i> Live Console Debugger</span>
+      <span id="close-debug-btn" style="cursor: pointer; color: var(--text-secondary);">&times; Close</span>
+    </div>
+    <div id="debug-log-output" style="flex-grow: 1; overflow-y: auto; padding: 0.5rem; color: var(--text-secondary); white-space: pre-wrap; line-height: 1.4;"></div>
+  </div>
+  
+  <!-- Mini Debug toggle button -->
+  <div id="debug-toggle-btn" style="position: fixed; bottom: 10px; right: 10px; padding: 0.5rem; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; z-index: 9999; font-size: 0.75rem; color: var(--accent-cyan); display: none;">
+    <i class="fa-solid fa-bug"></i> Debug Logs
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
